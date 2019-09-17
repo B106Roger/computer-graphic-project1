@@ -211,7 +211,7 @@ void Application::Quant_Populosity()
 {
 	unsigned char *rgb = this->To_RGB();
 	// unsigned char allColor[32768] = { 0 };
-	std::vector<std::vector<unsigned int>> allColor(32768);
+	std::vector<std::vector<unsigned int>> allColor(32768, std::vector<unsigned int>(2));
 	// uniform quantilization
 	unsigned char Rdiscrete = 256 / 8;
 	unsigned char Gdiscrete = 256 / 8;
@@ -227,6 +227,10 @@ void Application::Quant_Populosity()
 			img_data[offset_rgba + gg] = img_data[offset_rgba + gg] / 32 * 32;
 			img_data[offset_rgba + bb] = img_data[offset_rgba + bb] / 32 * 32;
 			
+			if (img_data[offset_rgba + rr] * 32 + img_data[offset_rgba + gg] + img_data[offset_rgba + bb] / 32 > 32768) {
+				std::cout << "hi" << std::endl;
+			}
+
 			std::vector<unsigned int> & ref = allColor[img_data[offset_rgba + rr] * 32 + img_data[offset_rgba + gg] + img_data[offset_rgba + bb] / 32];
 			ref[0] = img_data[offset_rgba + rr] * 32 + img_data[offset_rgba + gg] + img_data[offset_rgba + bb] / 32;
 			++ref[1];

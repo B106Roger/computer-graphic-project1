@@ -9,6 +9,15 @@
 *.dll
 *.dylib
 
+#ignore多餘檔案
+/.vs
+*.log
+*.tlog
+/Qt_Opengl_Framework/x64/Debug
+/x64/Debug
+
+
+
 # Qt-es
 object_script.*.Release
 object_script.*.Debug
@@ -47,3 +56,4 @@ compile_commands.json
 
 # QtCreator local machine specific files for imported projects
 *creator.user*
+/Qt_Opengl_Framework/x64/Debug/*.log
