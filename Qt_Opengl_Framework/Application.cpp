@@ -210,12 +210,12 @@ void Application::Quant_Populosity()
 {
 	unsigned char *rgb = this->To_RGB();
 
-	// unsigned char allColor[32768] = { 0 };
-	std::vector<std::vector<unsigned int>> allColor(32768, std::vector<unsigned int>(2));
-	// uniform quantilization
-	unsigned char Rdiscrete = 256 / 8;
-	unsigned char Gdiscrete = 256 / 8;
-	unsigned char Bdiscrete = 256 / 8;
+	// 陣列順序依序為 r g b count
+	std::vector<std::vector<unsigned short>> allColor(32768, std::vector<unsigned short>(4, 0));
+	// 執行 uniform quantilization 每個顏色取5bit
+	unsigned char Rdiscrete = 256 - 8;
+	unsigned char Gdiscrete = 256 - 8;
+	unsigned char Bdiscrete = 256 - 8;
 	for (int i = 0; i < img_height; i++)
 	{
 		for (int j = 0; j < img_width; j++)
@@ -223,30 +223,51 @@ void Application::Quant_Populosity()
 			int offset_rgb = i * img_width * 3 + j * 3;
 			int offset_rgba = i * img_width * 4 + j * 4;
 
-			img_data[offset_rgba + rr] = img_data[offset_rgba + rr] / 32 * 32;
-			img_data[offset_rgba + gg] = img_data[offset_rgba + gg] / 32 * 32;
-			img_data[offset_rgba + bb] = img_data[offset_rgba + bb] / 32 * 32;
+			rgb[offset_rgb + rr] = rgb[offset_rgb + rr] & Rdiscrete;
+			rgb[offset_rgb + gg] = rgb[offset_rgb + gg] & Gdiscrete;
+			rgb[offset_rgb + bb] = rgb[offset_rgb + bb] & Bdiscrete;
 
-			if (img_data[offset_rgba + rr] * 32 + img_data[offset_rgba + gg] + img_data[offset_rgba + bb] / 32 > 32768) {
-				std::cout << "hi" << std::endl;
-			}
+			std::vector<unsigned short> & ref = allColor[rgb[offset_rgb + rr] * 128 + rgb[offset_rgb + gg] * 4 + rgb[offset_rgb + bb] / 8];
 
-			std::vector<unsigned int> & ref = allColor[img_data[offset_rgba + rr] * 32 + img_data[offset_rgba + gg] + img_data[offset_rgba + bb] / 32];
-			ref[0] = img_data[offset_rgba + rr] * 32 + img_data[offset_rgba + gg] + img_data[offset_rgba + bb] / 32;
-			++ref[1];
-
-			img_data[offset_rgba + aa] = WHITE;
+			ref[rr] = rgb[offset_rgb + rr];
+			ref[gg] = rgb[offset_rgb + gg];
+			ref[bb] = rgb[offset_rgb + bb];
+			++ref[3];
 		}
 	}
-	// find most popular 256 color
-	sort(allColor.begin(), allColor.end(), [](std::vector<unsigned int> &item1, std::vector<unsigned int> &item2) {
-		return item1[1] > item2[1];
+	// 依顏色使用順序進行排序，並砍掉多出256以外的顏色
+	sort(allColor.begin(), allColor.end(), [](std::vector<unsigned short> &item1, std::vector<unsigned short> &item2) {
+		return item1[3] > item2[3];
 	});
-	std::vector<std::vector<unsigned char>> popularColor[256][3];
-	/*for (int i = 0; i < 256; i++)
+	if (allColor.size() > 256u) {
+		allColor.erase(allColor.begin() + 256, allColor.end());
+	}
+
+	// 依每個pixel 來算最接近的距離並且替換成最接近的顏色
+	for (int i = 0; i < img_height; i++)
 	{
-		popularColor[i][0] = allColor[i][0];
-	}*/
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
+
+			int MAX_DISTANCE = INT_MAX, index = -1;
+			for (unsigned int k = 0; k < allColor.size(); ++k )
+			{
+				auto & color = allColor[k];
+				int distance = int(pow(color[rr] - img_data[offset_rgba + rr], 2.f) + pow(color[gg] - img_data[offset_rgba + gg], 2.f) + pow(color[bb] - img_data[offset_rgba + bb], 2.f));
+				if (MAX_DISTANCE > distance) {
+					MAX_DISTANCE = distance;
+					index = k;
+				}
+			}
+			
+			img_data[offset_rgba + rr] = allColor[index][rr];
+			img_data[offset_rgba + gg] = allColor[index][gg];
+			img_data[offset_rgba + bb] = allColor[index][bb];
+		}
+	}
+
 
 	delete[] rgb;
 	mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);

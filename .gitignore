@@ -10,12 +10,13 @@
 *.dylib
 
 #ignore多餘檔案
-/.vs
+./.vs
 *.log
 *.tlog
-/Qt_Opengl_Framework/x64/Debug
-/x64/Debug
-
+./Qt_Opengl_Framework/x64/Debug
+./x64/Debug/*.tlog
+./x64/Release/*.tlog
+./Qt_Opengl_Framework/v15/*.*
 
 
 # Qt-es
@@ -57,3 +58,7 @@ compile_commands.json
 # QtCreator local machine specific files for imported projects
 *creator.user*
 /Qt_Opengl_Framework/x64/Debug/*.log
+*.log
+*.ipch
+*.log
+*.obj
