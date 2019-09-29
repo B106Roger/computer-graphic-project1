@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "qt_opengl_framework.h"
 #include <vector>
+#include <math.h>
 
 Application::Application()
 {
@@ -941,8 +942,48 @@ void Application::Resize(float scale)
 //  image.  Return success of operation.
 //
 ///////////////////////////////////////////////////////////////////////////////
+
 void Application::Rotate(float angleDegrees)
 {
+	unsigned char *rgb = this->To_RGB();
+	double radian = angleDegrees * 3.1415926 / 180.f;
+
+	int center_x = img_width / 2;
+	int center_y = img_height / 2;
+	img_data = new unsigned char[img_height * img_width * 4];
+
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+
+			float delta_j = (j - center_x) * cos(radian) - (center_y - i) * sin(radian);
+			float delta_i = (j - center_x) * sin(radian) + (center_y - i) * cos(radian);
+			int src_j = center_x + delta_j;
+			int src_i = center_y - delta_i;
+
+			int dst_offset_rgba = i * img_width * 4 + j * 4;
+			int src_offset_rgb = src_i * img_width * 3 + src_j * 3;
+
+
+			if (src_j >= img_width || src_j < 0 || src_i >= img_height || src_i < 0)
+			{
+				img_data[dst_offset_rgba + rr] = 0;
+				img_data[dst_offset_rgba + gg] = 0;
+				img_data[dst_offset_rgba + bb] = 0;
+				img_data[dst_offset_rgba + aa] = WHITE;
+			}
+			else 
+			{
+				img_data[dst_offset_rgba + rr] = rgb[src_offset_rgb + rr];
+				img_data[dst_offset_rgba + gg] = rgb[src_offset_rgb + gg];
+				img_data[dst_offset_rgba + bb] = rgb[src_offset_rgb + bb];
+				img_data[dst_offset_rgba + aa] = WHITE;
+
+			}
+		}
+	}
+	delete[] rgb;
 	mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
 	renew();
 }
