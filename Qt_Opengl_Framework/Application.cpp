@@ -675,9 +675,117 @@ void Application::Filter_Enhance()
 //  Halve the dimensions of this image.  Return success of operation.
 //
 ///////////////////////////////////////////////////////////////////////////////
+
+Stroke applyFilter(unsigned char *img_data_rgba, int img_width, int img_height, int x, int y, std::vector<std::vector<int>> &filter)
+{
+	int filterSizeY = (int)filter.size();
+	int filterSizeX = (int)filter.front().size();
+	Stroke result(0,0,0,0,0,0,0);
+	int sum = 0;
+	for (std::vector<int> &a : filter)
+	{
+		for (int &b : a)
+		{
+			sum += b;
+		}
+	}
+	if (x >= 300 && y >= 200) {
+		int a = 000;
+	}
+
+	const int rr = 2, gg = 1, bb = 0, aa = 3;
+	int r = 0, g = 0, b = 0, a = 0;
+	for (int i = -filterSizeY / 2; i < filterSizeY - filterSizeY / 2; i++)
+	{
+		for (int j = -filterSizeX / 2; j < filterSizeX - filterSizeX / 2; j++)
+		{
+			int rgb_offset = (i + y) * img_width * 4 + (j + x) * 4;
+			if (i + y >= img_height || i + y < 0 || j + x >= img_width || j + x < 0)
+			{
+				continue;
+			} 
+			else
+			{
+				r += img_data_rgba[rgb_offset + rr] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				g += img_data_rgba[rgb_offset + gg] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				b += img_data_rgba[rgb_offset + bb] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				a += img_data_rgba[rgb_offset + aa] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+			}
+		}
+	}
+
+	result.r = r/sum;
+	result.g = g/sum;
+	result.b = b/sum;
+	result.a = a/sum;
+	return result;
+}
+
 void Application::Half_Size()
 {
-	mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+	unsigned char *rgb = this->To_RGB();
+
+	int new_img_width = img_width  / 2;
+	int new_img_height = img_height / 2;
+	unsigned char *new_img_data = new unsigned char[new_img_width * new_img_height * 4];
+
+	std::vector<std::vector<int>> filter = { {1,2,1},{2,4,2},{1,2,1} };
+	for (int i = 0; i < new_img_height; i++)
+	{
+		for (int j = 0; j < new_img_width; j++)
+		{
+			int new_offset_rgba = i * new_img_width * 4 + j * 4;
+			Stroke myStroke = applyFilter(img_data,img_width,img_height, 2 *j, 2 * i, filter);
+			new_img_data[new_offset_rgba + rr] = myStroke.r;
+			new_img_data[new_offset_rgba + gg] = myStroke.g;
+			new_img_data[new_offset_rgba + bb] = myStroke.b;
+			new_img_data[new_offset_rgba + aa] = myStroke.a;
+			/*int rrr = 0, ggg = 0, bbb = 0, aaa = 0;
+			for (int k = -1; k < 2; k++)
+			{
+				for (int r = -1; r < 2; r++)
+				{
+					int origin_rgba_offset = (2 * i + r) * img_width * 4 + (j * 2 + k) * 4;
+
+					if (i * 2 + r < 0 || i * 2 + r >= img_height || 2 * j + k < 0 || 2 * j + k >= img_width)
+					{
+						continue;
+					}
+					else
+					{
+						int coefficent = 1;
+						if (k != 0 || r != 0)
+						{
+							if (abs(k + r) == 1)
+							{
+								coefficent = 2;
+							}
+						}
+						else
+						{
+							coefficent = 4;
+						}
+						rrr += img_data[origin_rgba_offset + rr] * coefficent;
+						ggg += img_data[origin_rgba_offset + gg] * coefficent;
+						bbb += img_data[origin_rgba_offset + bb] * coefficent;
+						aaa += img_data[origin_rgba_offset + aa] * coefficent;
+					}
+				}
+			}
+			new_img_data[new_offset_rgba + rr] = rrr / 16;
+			new_img_data[new_offset_rgba + gg] = ggg / 16;
+			new_img_data[new_offset_rgba + bb] = bbb / 16;
+			new_img_data[new_offset_rgba + aa] = aaa / 16;*/
+		}
+	}
+
+	delete[] rgb;
+	// delete[] img_data;
+	img_data = new_img_data;
+
+	mImageDst = QImage(img_data, new_img_width, new_img_height, QImage::Format_ARGB32);
+	img_width = new_img_width;
+	img_height = new_img_height;
 	renew();
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -687,7 +795,61 @@ void Application::Half_Size()
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Double_Size()
 {
-	mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+	unsigned char *rgb = this->To_RGB();
+
+	int new_img_width = img_width * 2;
+	int new_img_height = img_height * 2;
+	unsigned char *new_img_data = new unsigned char[new_img_width * new_img_height * 4];
+
+	std::vector<std::vector<int>> filter1 = { {1,2,1},{2,4,2}, {1,2,1} };
+	std::vector<std::vector<int>> filter2 = { {1,3,3,1},{3,9,9,3},{3,9,9,3},{1,3,3,1} };
+	std::vector<std::vector<int>> filter3 = { {1,2,1},{3,6,3},{3,6,3},{1,2,1} };
+	for (int i = 0; i < new_img_height; i++)
+	{
+		for (int j = 0; j < new_img_width; j++)
+		{
+			int new_offset_rgba = i * new_img_width * 4 + j * 4;
+			Stroke myStroke;
+			if (i % 2 == 0 && j % 2 == 0)
+			{
+				myStroke = applyFilter(img_data, img_width, img_height, j / 2, i / 2, filter1);
+			}
+			else if (i % 2 == 1 && j % 2 == 1)
+			{
+				Stroke tmp1 = applyFilter(img_data, img_width, img_height, j / 2 - 1, i / 2 - 1, filter2);
+				Stroke tmp2 = applyFilter(img_data, img_width, img_height, j / 2, i / 2, filter2);
+				Stroke tmp3 = applyFilter(img_data, img_width, img_height, j / 2 + 1, i / 2 + 1, filter2);
+				Stroke tmp4 = applyFilter(img_data, img_width, img_height, j / 2 + 2, i / 2 + 2, filter2);
+				myStroke.r = tmp1.r / 4 + tmp2.r / 4 + tmp3.r / 4 + tmp4.r / 4;
+				myStroke.g = tmp1.g / 4 + tmp2.g / 4 + tmp3.g / 4 + tmp4.g / 4;
+				myStroke.b = tmp1.b / 4 + tmp2.b / 4 + tmp3.b / 4 + tmp4.b / 4;
+				myStroke.a = tmp1.a / 4 + tmp2.a / 4 + tmp3.a / 4 + tmp4.a / 4;
+
+			}
+			else
+			{
+				Stroke tmp1 = applyFilter(img_data, img_width, img_height, j / 2 - 1, i / 2 - 1, filter3);
+				Stroke tmp2 = applyFilter(img_data, img_width, img_height, j / 2, i / 2, filter3);
+				Stroke tmp3 = applyFilter(img_data, img_width, img_height, j / 2 + 1, i / 2 + 1, filter3);
+				Stroke tmp4 = applyFilter(img_data, img_width, img_height, j / 2 + 2, i / 2 + 2, filter3);
+				myStroke.r = tmp1.r / 4 + tmp2.r / 4 + tmp3.r / 4 + tmp4.r / 4;
+				myStroke.g = tmp1.g / 4 + tmp2.g / 4 + tmp3.g / 4 + tmp4.g / 4;
+				myStroke.b = tmp1.b / 4 + tmp2.b / 4 + tmp3.b / 4 + tmp4.b / 4;
+				myStroke.a = tmp1.a / 4 + tmp2.a / 4 + tmp3.a / 4 + tmp4.a / 4;
+			}
+			new_img_data[new_offset_rgba + rr] = myStroke.r;
+			new_img_data[new_offset_rgba + gg] = myStroke.g;
+			new_img_data[new_offset_rgba + bb] = myStroke.b;
+			new_img_data[new_offset_rgba + aa] = myStroke.a;
+		}
+	}
+
+	delete[] rgb;
+	img_data = new_img_data;
+
+	mImageDst = QImage(img_data, new_img_width, new_img_height, QImage::Format_ARGB32);
+	this->img_width = new_img_width;
+	this->img_height = new_img_height;
 	renew();
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -708,7 +870,68 @@ void Application::resample_src(int u, int v, float ww, unsigned char* rgba)
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Resize(float scale)
 {
-	mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+	unsigned char *rgb = this->To_RGB();
+
+	int new_img_width = img_width * scale;
+	int new_img_height = img_height * scale;
+	unsigned char *new_img_data = new unsigned char[new_img_width * new_img_height * 4];
+
+
+	for (int i = 0; i < new_img_height; i++)
+	{
+		for (int j = 0; j < new_img_width; j++)
+		{
+			int new_offset_rgba = i * new_img_width * 4 + j * 4;
+
+
+			int rrr = 0, ggg = 0, bbb = 0, aaa = 0;
+			for (int k = -1; k < 2; k++)
+			{
+				for (int r = -1; r < 2; r++)
+				{
+					int origin_rgba_offset = (i / scale + r) * img_width * 4 + (j / scale + k) * 4;
+
+					if (i / scale + r < 0 || i / scale + r >= img_height || j / scale + k < 0 || j / scale + k >= img_width)
+					{
+						continue;
+					}
+					else
+					{
+						int coefficent = 1;
+						if (k != 0 || r != 0)
+						{
+							if (abs(k + r) == 1)
+							{
+								coefficent = 2;
+							}
+						}
+						else
+						{
+							coefficent = 4;
+						}
+						rrr += img_data[origin_rgba_offset + rr] * coefficent;
+						ggg += img_data[origin_rgba_offset + gg] * coefficent;
+						bbb += img_data[origin_rgba_offset + bb] * coefficent;
+						aaa += img_data[origin_rgba_offset + aa] * coefficent;
+					}
+				}
+			}
+
+			new_img_data[new_offset_rgba + rr] = rrr / 16;
+			new_img_data[new_offset_rgba + gg] = ggg / 16;
+			new_img_data[new_offset_rgba + bb] = bbb / 16;
+			new_img_data[new_offset_rgba + aa] = aaa / 16;
+
+		}
+	}
+
+	delete[] rgb;
+	delete[] img_data;
+	img_data = new_img_data;
+
+	mImageDst = QImage(img_data, new_img_width, new_img_height, QImage::Format_ARGB32);
+	img_width = new_img_width;
+	img_height = new_img_height;
 	renew();
 }
 
