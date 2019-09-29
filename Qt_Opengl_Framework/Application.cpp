@@ -954,9 +954,23 @@ void Application::Comp_image(int tMethod)
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Comp_Over()
 {
+	// img_data over img_data2
 	if (img_height == img_height2 && img_width == img_width2)
 	{
-
+		for (int i = 0; i < img_height; i++)
+		{
+			for (int j = 0; j < img_width; j++)
+			{
+				int offset_rgba = i * img_width * 4 + j * 4;
+				// img_data[offset_rgba + k]  + img_data2[offset_rgba + k] * (img_data[offset_rgba + aa] - img_data[offset_rgba + aa]) / 255;
+				// img_data[offset_rgba + k]  + img_data2[offset_rgba + k] * (255 - img_data[offset_rgba + aa]) / 255;
+				for (int k = 0; k < 3; k++)
+					img_data[offset_rgba + k] = img_data[offset_rgba + k] * img_data[offset_rgba + aa] / 255 + img_data2[offset_rgba + k] * (255 - img_data[offset_rgba + aa]) / 255;
+				img_data[offset_rgba + 3] = WHITE;
+			}
+		}
+		mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+		renew();
 	}
 	else
 	{
@@ -972,9 +986,21 @@ void Application::Comp_Over()
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Comp_In()
 {
+	// img_data in img_data2
 	if (img_height == img_height2 && img_width == img_width2)
 	{
-
+		for (int i = 0; i < img_height; i++)
+		{
+			for (int j = 0; j < img_width; j++)
+			{
+				int offset_rgba = i * img_width * 4 + j * 4;
+				for (int k = 0; k < 3; k++)
+					img_data[offset_rgba + k] = img_data[offset_rgba + k] * img_data[offset_rgba + aa] / 255;
+				img_data[offset_rgba + 3] = WHITE;
+			}
+		}
+		mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+		renew();
 	}
 	else
 	{
@@ -990,9 +1016,21 @@ void Application::Comp_In()
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Comp_Out()
 {
+	// img_data out img_data2
 	if (img_height == img_height2 && img_width == img_width2)
 	{
-
+		for (int i = 0; i < img_height; i++)
+		{
+			for (int j = 0; j < img_width; j++)
+			{
+				int offset_rgba = i * img_width * 4 + j * 4;
+				for (int k = 0; k < 3; k++)
+					img_data[offset_rgba + k] = img_data[offset_rgba + k] * (255 - img_data2[offset_rgba + aa]) / 255;
+				img_data[offset_rgba + 3] = WHITE;
+			}
+		}
+		mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+		renew();
 	}
 	else
 	{
@@ -1008,9 +1046,21 @@ void Application::Comp_Out()
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Comp_Atop()
 {
+	// img_data atop img_data2
 	if (img_height == img_height2 && img_width == img_width2)
 	{
-
+		for (int i = 0; i < img_height; i++)
+		{
+			for (int j = 0; j < img_width; j++)
+			{
+				int offset_rgba = i * img_width * 4 + j * 4;
+				for (int k = 0; k < 3; k++)
+					img_data[offset_rgba + k] = img_data[offset_rgba + k] * img_data2[offset_rgba + aa] / 255 + img_data2[offset_rgba + k] * (1 - img_data[offset_rgba + aa]) / 255;
+				img_data[offset_rgba + 3] = WHITE;
+			}
+		}
+		mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+		renew();
 	}
 	else
 	{
@@ -1026,9 +1076,21 @@ void Application::Comp_Atop()
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Comp_Xor()
 {
+	// img_data xor img_data2
 	if (img_height == img_height2 && img_width == img_width2)
 	{
-
+		for (int i = 0; i < img_height; i++)
+		{
+			for (int j = 0; j < img_width; j++)
+			{
+				int offset_rgba = i * img_width * 4 + j * 4;
+				for (int k = 0; k < 3; k++)
+					img_data[offset_rgba + k] = img_data[offset_rgba + k] * (255 - img_data2[offset_rgba + aa]) / 255 + img_data2[offset_rgba + k] * (255 - img_data[offset_rgba + aa]) / 255;
+				img_data[offset_rgba + 3] = WHITE;
+			}
+		}
+		mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+		renew();
 	}
 	else
 	{
