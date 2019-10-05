@@ -595,9 +595,61 @@ void Application::filtering(double filter[][5])
 
 void Application::filtering(double **filter, int n)
 {
+	bool edgeFlag = false;
+	if (n == -5)
+	{
+		edgeFlag = true;
+		n = 5;
+	}
 	unsigned char *rgb = this->To_RGB();
 
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
 
+			int startPixel = offset_rgb - 2 * img_width * 3 - 2 * 3;
+
+			int sum = 0;
+
+			if (!edgeFlag)
+				for (int x = 0; x < n; x++)
+				{
+					for (int y = 0; y < n; y++)
+					{
+						sum += filter[x][y];
+					}
+				}
+			else
+				sum = 256;
+
+
+			for (int k = 0; k < 3; k++)
+			{
+				int sttemp = startPixel + k;
+				double colorSum = 0;
+				for (int x = 0; x < n; x++)
+				{
+					for (int y = 0; y < n; y++)
+					{
+						int pixelAt = sttemp + x * img_width * 3 + y * 3;
+						if (pixelAt < 0 || pixelAt>img_height*img_width * 3)
+							colorSum += 0;
+						else
+							colorSum += rgb[pixelAt] * filter[x][y];
+					}
+				}
+				if (colorSum < 0) {
+					colorSum = 0;
+				}
+				img_data[offset_rgba + k] = colorSum / sum;
+			}
+
+			img_data[offset_rgba + aa] = WHITE;
+		}
+	}
 
 	delete[] rgb;
 	mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
@@ -610,6 +662,15 @@ void Application::filtering(double **filter, int n)
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Filter_Box()
 {
+	double ** filter;
+	filter = (double **)malloc(5 * sizeof(double *));
+	for (int i = 0; i < 5; i++)
+		filter[i] = (double *)malloc(5 * sizeof(double));
+	for (int i = 0; i < 5; i++)
+		for (int j = 0; j < 5; j++)
+			filter[i][j] = 1;
+
+	filtering(filter, 5);
 
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -620,7 +681,34 @@ void Application::Filter_Box()
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Filter_Bartlett()
 {
+	double ** filter;
+	filter = (double **)malloc(5 * sizeof(double *));
+	for (int i = 0; i < 5; i++)
+		filter[i] = (double *)malloc(5 * sizeof(double));
+	for (int i = 0; i < 5; i++)
+	{
+		int n;
+		if (i == 1 || i == 3)
+			n = 2;
+		else if (i == 2)
+			n = 3;
+		else
+			n = 1;
+		for (int j = 0; j < 5; j++)
+		{
+			int m;
+			if (j == 1 || j == 3)
+				m = 2;
+			else if (j == 2)
+				m = 3;
+			else
+				m = 1;
 
+			filter[i][j] = n * m;
+		}
+	}
+
+	filtering(filter, 5);
 }
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -630,7 +718,30 @@ void Application::Filter_Bartlett()
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Filter_Gaussian()
 {
+	double ** filter;
+	filter = (double **)malloc(5 * sizeof(double *));
+	for (int i = 0; i < 5; i++)
+		filter[i] = (double *)malloc(5 * sizeof(double));
 
+	for (int i = 0; i < 5; i++) {
+
+		int tmpS = 1, tmpE = 1;
+		for (int j = 0; j < i; j++)
+			tmpS *= (5 - 1 - j);
+		for (int j = 1; j <= i; j++)
+			tmpE *= j;
+
+		filter[0][i] = tmpS / tmpE;
+		filter[i][0] = tmpS / tmpE;
+	}
+	for (int i = 0; i < 5; i++) {
+		for (int j = 0; j < 5; j++) {
+			if (j != 0 && i != 0)
+				filter[i][j] = filter[0][j] * filter[i][0];
+		}
+	}
+
+	filtering(filter, 5);
 }
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -638,10 +749,41 @@ void Application::Filter_Gaussian()
 //  operation.
 //
 ///////////////////////////////////////////////////////////////////////////////
+
+
+
 void Application::Filter_Gaussian_N(unsigned int N)
 {
+	double ** filter;
+	filter = (double **)malloc(N * sizeof(double *));
+	for (int i = 0; i < N; i++)
+		filter[i] = (double *)malloc(N * sizeof(double));
 
+	for (int i = 0; i < N; i++) {
+
+		int tmpS = 1, tmpE = 1;
+		for (int j = 0; j < i; j++)
+			tmpS *= (N - 1 - j);
+		for (int j = 1; j <= i; j++)
+			tmpE *= j;
+
+		filter[0][i] = tmpS / tmpE;
+		filter[i][0] = tmpS / tmpE;
+	}
+
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < N; j++) {
+			if (j != 0 && i != 0)
+				filter[i][j] = filter[0][j] * filter[i][0];
+		}
+	}
+
+	filtering(filter, N);
 }
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 //  Perform 5x5 edge detect (high pass) filter on this image.  Return 
@@ -650,7 +792,61 @@ void Application::Filter_Gaussian_N(unsigned int N)
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Filter_Edge()
 {
+	double ** filter;
+	filter = (double **)malloc(5 * sizeof(double *));
+	for (int i = 0; i < 5; i++)
+		filter[i] = (double *)malloc(5 * sizeof(double));
 
+
+	for (int i = 0; i < 5; i++) {
+
+		int tmpS = 1, tmpE = 1;
+		for (int j = 0; j < i; j++)
+			tmpS *= (5 - 1 - j);
+		for (int j = 1; j <= i; j++)
+			tmpE *= j;
+
+		filter[0][i] = tmpS / tmpE;
+		filter[i][0] = tmpS / tmpE;
+	}
+
+	for (int i = 0; i < 5; i++) {
+		for (int j = 0; j < 5; j++) {
+			if (j != 0 && i != 0)
+				filter[i][j] = filter[0][j] * filter[i][0];
+		}
+	}
+
+	for (int i = 0; i < 5; i++) {
+		for (int j = 0; j < 5; j++) {
+			filter[i][j] = -filter[i][j];
+		}
+	}
+
+
+	filter[2][2] = 220;
+
+	filtering(filter, -5);
+
+	/*	unsigned char *rgb = this->To_RGB();
+
+		for (int i = 0; i < img_height; i++)
+		{
+			for (int j = 0; j < img_width; j++)
+			{
+				int offset_rgb = i * img_width * 3 + j * 3;
+				int offset_rgba = i * img_width * 4 + j * 4;
+
+				for (int k = 0; k < 3; k++) {
+					if(img_data[offset_rgba + k] >10)
+					img_data[offset_rgba + k] +=10;
+				}
+			}
+		}
+
+		delete[] rgb;
+		mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+		renew();*/
 }
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -662,6 +858,29 @@ void Application::Filter_Enhance()
 {
 	unsigned char *rgb = this->To_RGB();
 
+	this->Filter_Edge();
+
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
+
+			for (int k = 0; k < 3; k++) {
+				double rgbTemp = rgb[offset_rgb + k];
+				double imgDataTemp = img_data[offset_rgba + k];
+
+				if (imgDataTemp + rgbTemp > 255) {
+					img_data[offset_rgba + k] = 255;
+				}
+				else {
+					img_data[offset_rgba + k] = imgDataTemp + rgbTemp;
+				}
+
+			}
+		}
+	}
 
 
 	delete[] rgb;
