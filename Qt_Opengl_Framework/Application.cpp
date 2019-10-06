@@ -1,7 +1,13 @@
 #include "Application.h"
 #include "qt_opengl_framework.h"
+#include <iostream>
+#include <fstream>
 #include <vector>
+#include <algorithm>
+#include <string>
 #include <math.h>
+#include <assert.h>
+using namespace std;
 
 Application::Application()
 {
@@ -896,15 +902,15 @@ void Application::Filter_Enhance()
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-Stroke applyFilter(unsigned char *img_data_rgba, int img_width, int img_height, int x, int y, std::vector<std::vector<int>> &filter)
+Stroke applyFilter(unsigned char *img_data_rgba, int img_width, int img_height, int x, int y, std::vector<std::vector<double>> &filter)
 {
 	int filterSizeY = (int)filter.size();
 	int filterSizeX = (int)filter.front().size();
 	Stroke result(0,0,0,0,0,0,0);
 	int sum = 0;
-	for (std::vector<int> &a : filter)
+	for (std::vector<double> &a : filter)
 	{
-		for (int &b : a)
+		for (double &b : a)
 		{
 			sum += b;
 		}
@@ -940,6 +946,86 @@ Stroke applyFilter(unsigned char *img_data_rgba, int img_width, int img_height, 
 	result.a = a/sum;
 	return result;
 }
+Stroke applyFilterRGB(unsigned char *img_data_rgb, int img_width, int img_height, int x, int y, std::vector<std::vector<int>> &filter)
+{
+	int filterSizeY = (int)filter.size();
+	int filterSizeX = (int)filter.front().size();
+	Stroke result(0, 0, 0, 0, 0, 0, 0);
+	int sum = 0;
+	for (std::vector<int> &a : filter)
+	{
+		for (int &b : a)
+		{
+			sum += b;
+		}
+	}
+
+	const int rr = 2, gg = 1, bb = 0;
+	int r = 0, g = 0, b = 0;
+	for (int i = -filterSizeY / 2; i < filterSizeY - filterSizeY / 2; i++)
+	{
+		for (int j = -filterSizeX / 2; j < filterSizeX - filterSizeX / 2; j++)
+		{
+			int rgb_offset = (i + y) * img_width * 3 + (j + x) * 3;
+			if (i + y >= img_height || i + y < 0 || j + x >= img_width || j + x < 0)
+			{
+				continue;
+			}
+			else
+			{
+				r += img_data_rgb[rgb_offset + rr] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				g += img_data_rgb[rgb_offset + gg] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				b += img_data_rgb[rgb_offset + bb] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+			}
+		}
+	}
+
+	result.r = r / sum;
+	result.g = g / sum;
+	result.b = b / sum;
+	return result;
+}
+Stroke applyFilterRGB(unsigned char *img_data_rgb, int img_width, int img_height, int x, int y, std::vector<std::vector<double>> &filter)
+{
+	int filterSizeY = (int)filter.size();
+	int filterSizeX = (int)filter.front().size();
+	Stroke result(0, 0, 0, 0, 0, 0, 0);
+	double sum = 0;
+	for (std::vector<double> &a : filter)
+	{
+		for (double &b : a)
+		{
+			sum += b;
+		}
+	}
+
+	const int rr = 2, gg = 1, bb = 0;
+	double r = 0, g = 0, b = 0;
+	for (int i = -filterSizeY / 2; i < filterSizeY - filterSizeY / 2; i++)
+	{
+		for (int j = -filterSizeX / 2; j < filterSizeX - filterSizeX / 2; j++)
+		{
+			int rgb_offset = (i + y) * img_width * 3 + (j + x) * 3;
+			if (i + y >= img_height || i + y < 0 || j + x >= img_width || j + x < 0)
+			{
+				continue;
+			}
+			else
+			{
+				r += (double)img_data_rgb[rgb_offset + rr] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				g += (double)img_data_rgb[rgb_offset + gg] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				b += (double)img_data_rgb[rgb_offset + bb] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+			}
+		}
+	}
+	assert(255.f >= r / sum);
+	assert(255.f >= g / sum);
+	assert(255.f >= b / sum);
+	result.r = r / sum;
+	result.g = g / sum;
+	result.b = b / sum;
+	return result;
+}
 
 void Application::Half_Size()
 {
@@ -949,7 +1035,7 @@ void Application::Half_Size()
 	int new_img_height = img_height / 2;
 	unsigned char *new_img_data = new unsigned char[new_img_width * new_img_height * 4];
 
-	std::vector<std::vector<int>> filter = { {1,2,1},{2,4,2},{1,2,1} };
+	std::vector<std::vector<double>> filter = { {1,2,1},{2,4,2},{1,2,1} };
 	for (int i = 0; i < new_img_height; i++)
 	{
 		for (int j = 0; j < new_img_width; j++)
@@ -985,9 +1071,9 @@ void Application::Double_Size()
 	int new_img_height = img_height * 2;
 	unsigned char *new_img_data = new unsigned char[new_img_width * new_img_height * 4];
 
-	std::vector<std::vector<int>> filter1 = { {1,2,1},{2,4,2}, {1,2,1} };
-	std::vector<std::vector<int>> filter2 = { {1,3,3,1},{3,9,9,3},{3,9,9,3},{1,3,3,1} };
-	std::vector<std::vector<int>> filter3 = { {1,2,1},{3,6,3},{3,6,3},{1,2,1} };
+	std::vector<std::vector<double>> filter1 = { {1,2,1},{2,4,2}, {1,2,1} };
+	std::vector<std::vector<double>> filter2 = { {1,3,3,1},{3,9,9,3},{3,9,9,3},{1,3,3,1} };
+	std::vector<std::vector<double>> filter3 = { {1,2,1},{3,6,3},{3,6,3},{1,2,1} };
 	for (int i = 0; i < new_img_height; i++)
 	{
 		for (int j = 0; j < new_img_width; j++)
@@ -1060,7 +1146,7 @@ void Application::Resize(float scale)
 	int new_img_height = img_height * scale;
 	unsigned char *new_img_data = new unsigned char[new_img_width * new_img_height * 4];
 
-	std::vector<std::vector<int>> filter = { {1,2,1},{2,4,2},{1,2,1} };
+	std::vector<std::vector<double>> filter = { {1,2,1},{2,4,2},{1,2,1} };
 
 	for (int i = 0; i < new_img_height; i++)
 	{
@@ -1319,6 +1405,50 @@ void Application::Comp_Xor()
 
 //------------------------NPR------------------------
 
+// input rgb data; output rgb guassian data;
+unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB,int n)
+{
+	// create Gaussian filter
+	unsigned char *rgb = new unsigned char[img_width * img_height * 3];
+	for (int i = 0; i < img_width * img_height * 3; i++)
+	{
+		rgb[i] = sourceRGB[i];
+	}
+	vector<vector<double>> filter(n, vector<double>(n, 0));
+	for (int i = 0; i < n; i++) {
+
+		double tmpS = 1, tmpE = 1;
+		for (int j = 0; j < i; j++)
+			tmpS *= (n - 1 - j);
+		for (int j = 1; j <= i; j++)
+			tmpE *= j;
+
+		filter[0][i] = tmpS / tmpE;
+		filter[i][0] = tmpS / tmpE;
+	}
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			if (j != 0 && i != 0)
+				filter[i][j] = filter[0][j] * filter[i][0];
+		}
+	}
+
+	// apply filter
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			Stroke tmp = applyFilterRGB(rgb, img_width, img_height, j, i, filter);
+			rgb[offset_rgb + rr] = tmp.r;
+			rgb[offset_rgb + gg] = tmp.g;
+			rgb[offset_rgb + bb] = tmp.b;
+		}
+	}
+	return rgb;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 //      Run simplified version of Hertzmann's painterly image filter.
@@ -1329,13 +1459,126 @@ void Application::Comp_Xor()
 ///////////////////////////////////////////////////////////////////////////////
 void Application::NPR_Paint()
 {
+	unsigned char * sourceRGB = this->To_RGB();
+
+	vector<int> radii = { 7 };  // 7 3 1
+	for (int radius: radii)
+	{
+		unsigned char * reference__img = this->getGaussianImgData(sourceRGB, 3 * radius + 1);
+
+		this->NPR_Paint_Layer(img_data, reference__img, radius);
+
+		delete reference__img;
+	}
+
+	/*unsigned char * reference__img = this->getGaussianImgData(sourceRGB, 7 * 2 + 1);
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
+
+			img_data[offset_rgba + rr] = reference__img[offset_rgb + rr];
+			img_data[offset_rgba + gg] = reference__img[offset_rgb + gg];
+			img_data[offset_rgba + bb] = reference__img[offset_rgb + bb];
+			img_data[offset_rgba + aa] = WHITE;
+		}
+	}*/
+
 	mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
 	renew();
 }
 
+// tCanvas RGBA; tReferenceImage Guassian RGB;
 void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tReferenceImage, int tBrushSize)
 {
+	vector<Stroke> strokeList;
+	float *distance = new float[img_width * img_height];
 
+	// 參數
+	float grid_2 = (tBrushSize * tBrushSize) * 3;
+	float threshold = 25.f;
+	int xStepSize = tBrushSize;
+	int yStepSize = tBrushSize;
+
+	// 計算與tCanvas 跟 tReferenceImage 的rgb距離
+	ofstream ofs1, ofs2;
+	ofs1.open("error.csv");
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset = i * img_width + j;
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
+			float dist = (float)sqrt(
+				pow(tCanvas[offset_rgba + rr] - tReferenceImage[offset_rgb + rr], 2.f) +
+				pow(tCanvas[offset_rgba + gg] - tReferenceImage[offset_rgb + gg], 2.f) +
+				pow(tCanvas[offset_rgba + bb] - tReferenceImage[offset_rgb + bb], 2.f)
+			);
+
+			// debug
+			assert(dist >= 0.f);
+			distance[offset] = dist;
+			ofs1 << dist << ',';
+		}
+		ofs1 << endl;
+	}
+	ofs1.close();
+
+
+	ofs2.open("avgError.csv");
+	for (int i = tBrushSize; i < img_height; i+= yStepSize)
+	{
+		for (int j = tBrushSize; j < img_width; j+= xStepSize)
+		{
+			if (j + tBrushSize >= img_width || i + tBrushSize >= img_height)
+			{
+				continue;
+			}
+			else
+			{
+				float avg_error = 0.f;
+				float max_error = 0.f;
+				int x, y;
+				// 取得在這個tBushSize的範圍內平均錯誤距離
+				for (int new_i = i - tBrushSize; new_i <= i + tBrushSize; new_i++)
+				{
+					for (int new_j = j - tBrushSize; new_j <= j + tBrushSize; new_j++)
+					{
+						int new_offset = new_i * img_width + new_j;
+						avg_error += distance[new_offset];
+						if (distance[new_offset] > max_error)
+						{
+							max_error = distance[new_offset];
+							x = new_j; 
+							y = new_i;
+						}
+					}
+				}
+				avg_error =  avg_error / grid_2;
+
+				ofs2 << avg_error << ',';
+				// 如果平均錯誤距離高於門檻，就將當前範圍內error最大的座標當作stroke中心
+				if (avg_error >= threshold)
+				{
+					int offset_rgb = y * img_width * 3 + x * 3;
+					strokeList.push_back(Stroke(tBrushSize, x, y, tReferenceImage[offset_rgb + rr], tReferenceImage[offset_rgb + gg], tReferenceImage[offset_rgb + bb], WHITE));
+				}
+			}
+		}
+		ofs2 << endl;
+	}
+	ofs2.close();
+	random_shuffle(strokeList.begin(), strokeList.end());
+	for (Stroke & stroke : strokeList)
+	{
+		this->Paint_Stroke(stroke);
+	}
+
+
+	delete distance;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

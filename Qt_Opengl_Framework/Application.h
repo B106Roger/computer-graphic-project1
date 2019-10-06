@@ -66,6 +66,7 @@ public:
 	void Comp_Xor();
 
 	// Special
+	unsigned char *getGaussianImgData(const unsigned char *rgb, int N);
 	void NPR_Paint();
 	void Paint_Stroke(const Stroke& s);
 	void NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tReferenceImage, int tBrushSize);
@@ -73,7 +74,7 @@ public:
 protected:
 	QImage mImageSrc, mImageSrcSecond;
 	QImage mImageDst;
-
+	 
 	void createScene(void);
 
 	void renew();
