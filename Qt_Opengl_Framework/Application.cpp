@@ -618,16 +618,29 @@ void Application::filtering(double **filter, int n)
 
 			int startPixel = offset_rgb - 2 * img_width * 3 - 2 * 3;
 
-			int sum = 0;
+			double sum = 0;
+			unsigned long long max=0;
 
 			if (!edgeFlag)
+			{
 				for (int x = 0; x < n; x++)
 				{
 					for (int y = 0; y < n; y++)
 					{
-						sum += filter[x][y];
+						if (max < filter[x][y])
+							max = filter[x][y];
 					}
 				}
+
+				for (int x = 0; x < n; x++)
+				{
+					for (int y = 0; y < n; y++)
+					{
+						sum += (filter[x][y]/max);
+					}
+				}
+			}
+				
 			else
 				sum = 256;
 
@@ -650,6 +663,8 @@ void Application::filtering(double **filter, int n)
 				if (colorSum < 0) {
 					colorSum = 0;
 				}
+				if (!edgeFlag)
+					colorSum /= max;
 				img_data[offset_rgba + k] = colorSum / sum;
 			}
 
@@ -771,9 +786,10 @@ void Application::Filter_Gaussian_N(unsigned int N)
 	for (int i = 0; i < N; i++)
 		filter[i] = (double *)malloc(N * sizeof(double));
 
+	//計算巴斯卡三角形的結果放入矩陣的第0行與第0列中
 	for (int i = 0; i < N; i++) {
 
-		int tmpS = 1, tmpE = 1;
+		unsigned long long tmpS = 1, tmpE = 1;
 		for (int j = 0; j < i; j++)
 			tmpS *= (N - 1 - j);
 		for (int j = 1; j <= i; j++)
@@ -783,6 +799,7 @@ void Application::Filter_Gaussian_N(unsigned int N)
 		filter[i][0] = tmpS / tmpE;
 	}
 
+	//利用第0行與第0列形成矩陣
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < N; j++) {
 			if (j != 0 && i != 0)
