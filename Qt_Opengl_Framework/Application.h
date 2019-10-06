@@ -67,6 +67,7 @@ public:
 
 	// Special
 	unsigned char *getGaussianImgData(const unsigned char *rgb, int N);
+	unsigned char *getGaussianImgData2(const unsigned char *sourceRGB, int n);
 	void NPR_Paint();
 	void Paint_Stroke(const Stroke& s);
 	void NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tReferenceImage, int tBrushSize);

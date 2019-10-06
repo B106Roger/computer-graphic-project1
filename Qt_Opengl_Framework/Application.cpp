@@ -760,6 +760,12 @@ void Application::Filter_Gaussian()
 
 void Application::Filter_Gaussian_N(unsigned int N)
 {
+	// testing for Error
+	unsigned char * currentRGB = this->To_RGB();
+	ofstream out;
+	out.open("Gaussian_error.csv");
+
+
 	double ** filter;
 	filter = (double **)malloc(N * sizeof(double *));
 	for (int i = 0; i < N; i++)
@@ -785,6 +791,25 @@ void Application::Filter_Gaussian_N(unsigned int N)
 	}
 
 	filtering(filter, N);
+
+	// testing for Error
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
+
+			float error = sqrt(
+				pow(img_data[offset_rgba + rr] - currentRGB[offset_rgb + rr], 2.f) +
+				pow(img_data[offset_rgba + gg] - currentRGB[offset_rgb + gg], 2.f) +
+				pow(img_data[offset_rgba + bb] - currentRGB[offset_rgb + bb], 2.f)
+			);
+			out << error << ',';
+		}
+		out << endl;
+	}
+	out.close();
 }
 
 
@@ -1012,18 +1037,18 @@ Stroke applyFilterRGB(unsigned char *img_data_rgb, int img_width, int img_height
 			}
 			else
 			{
-				r += (double)img_data_rgb[rgb_offset + rr] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
-				g += (double)img_data_rgb[rgb_offset + gg] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
-				b += (double)img_data_rgb[rgb_offset + bb] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				r += (double)img_data_rgb[rgb_offset + rr] * (double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				g += (double)img_data_rgb[rgb_offset + gg] * (double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				b += (double)img_data_rgb[rgb_offset + bb] * (double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
 			}
 		}
 	}
 	assert(255.f >= r / sum);
 	assert(255.f >= g / sum);
 	assert(255.f >= b / sum);
-	result.r = r / sum;
-	result.g = g / sum;
-	result.b = b / sum;
+	result.r = unsigned char (r / sum);
+	result.g = unsigned char (g / sum);
+	result.b = unsigned char (b / sum);
 	return result;
 }
 
@@ -1448,6 +1473,91 @@ unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB,in
 	return rgb;
 }
 
+unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, int n)
+{
+	double ** filter;
+	filter = (double **)malloc(n * sizeof(double *));
+	for (int i = 0; i < n; i++)
+		filter[i] = (double *)malloc(n * sizeof(double));
+
+	for (int i = 0; i < n; i++) {
+
+		int tmpS = 1, tmpE = 1;
+		for (int j = 0; j < i; j++)
+			tmpS *= (n - 1 - j);
+		for (int j = 1; j <= i; j++)
+			tmpE *= j;
+
+		filter[0][i] = tmpS / tmpE;
+		filter[i][0] = tmpS / tmpE;
+	}
+
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			if (j != 0 && i != 0)
+				filter[i][j] = filter[0][j] * filter[i][0];
+		}
+	}
+
+	bool edgeFlag = false;
+	if (n == -5)
+	{
+		edgeFlag = true;
+		n = 5;
+	}
+	unsigned char *rgb = this->To_RGB();
+	unsigned char *outputData = this->To_RGB();
+
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
+
+			int startPixel = offset_rgb - 2 * img_width * 3 - 2 * 3;
+
+			int sum = 0;
+
+			if (!edgeFlag)
+				for (int x = 0; x < n; x++)
+				{
+					for (int y = 0; y < n; y++)
+					{
+						sum += filter[x][y];
+					}
+				}
+			else
+				sum = 256;
+
+
+			for (int k = 0; k < 3; k++)
+			{
+				int sttemp = startPixel + k;
+				double colorSum = 0;
+				for (int x = 0; x < n; x++)
+				{
+					for (int y = 0; y < n; y++)
+					{
+						int pixelAt = sttemp + x * img_width * 3 + y * 3;
+						if (pixelAt < 0 || pixelAt>img_height*img_width * 3)
+							colorSum += 0;
+						else
+							colorSum += rgb[pixelAt] * filter[x][y];
+					}
+				}
+				if (colorSum < 0) {
+					colorSum = 0;
+				}
+				outputData[offset_rgb + k] = colorSum / sum;
+			}
+		}
+	}
+
+	delete rgb;
+	return outputData;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -1459,12 +1569,12 @@ unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB,in
 ///////////////////////////////////////////////////////////////////////////////
 void Application::NPR_Paint()
 {
-	unsigned char * sourceRGB = this->To_RGB();
+	const unsigned char * sourceRGB = this->To_RGB();
 
-	vector<int> radii = { 7 };  // 7 3 1
+	vector<int> radii = { 7, 3, 1 };  // 7 3 1
 	for (int radius: radii)
 	{
-		unsigned char * reference__img = this->getGaussianImgData(sourceRGB, 3 * radius + 1);
+		unsigned char * reference__img = this->getGaussianImgData2(sourceRGB, 2 * radius + 1);
 
 		this->NPR_Paint_Layer(img_data, reference__img, radius);
 
@@ -1497,14 +1607,15 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 	float *distance = new float[img_width * img_height];
 
 	// 參數
-	float grid_2 = (tBrushSize * tBrushSize) * 3;
-	float threshold = 25.f;
+	float grid_2 = pow(tBrushSize * 2 + 1, 2.f);
+	float threshold = tBrushSize * 3;
+	threshold = max(5.f, threshold);
 	int xStepSize = tBrushSize;
 	int yStepSize = tBrushSize;
 
 	// 計算與tCanvas 跟 tReferenceImage 的rgb距離
 	ofstream ofs1, ofs2;
-	ofs1.open("error.csv");
+	ofs1.open(string("error") + to_string(tBrushSize) + ".csv") ;
 	for (int i = 0; i < img_height; i++)
 	{
 		for (int j = 0; j < img_width; j++)
@@ -1528,7 +1639,7 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 	ofs1.close();
 
 
-	ofs2.open("avgError.csv");
+	ofs2.open(string("avgError") + to_string(tBrushSize) + ".csv");
 	for (int i = tBrushSize; i < img_height; i+= yStepSize)
 	{
 		for (int j = tBrushSize; j < img_width; j+= xStepSize)
@@ -1564,7 +1675,11 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 				if (avg_error >= threshold)
 				{
 					int offset_rgb = y * img_width * 3 + x * 3;
-					strokeList.push_back(Stroke(tBrushSize, x, y, tReferenceImage[offset_rgb + rr], tReferenceImage[offset_rgb + gg], tReferenceImage[offset_rgb + bb], WHITE));
+					strokeList.push_back(Stroke(tBrushSize, x, y, 
+						tReferenceImage[offset_rgb + rr], 
+						tReferenceImage[offset_rgb + gg], 
+						tReferenceImage[offset_rgb + bb], 
+						WHITE));
 				}
 			}
 		}
