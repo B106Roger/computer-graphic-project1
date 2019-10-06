@@ -1032,7 +1032,7 @@ Stroke applyFilterRGB(unsigned char *img_data_rgb, int img_width, int img_height
 	int filterSizeY = (int)filter.size();
 	int filterSizeX = (int)filter.front().size();
 	Stroke result(0, 0, 0, 0, 0, 0, 0);
-	double sum = 0;
+	long double sum = 0;
 	for (std::vector<double> &a : filter)
 	{
 		for (double &b : a)
@@ -1042,7 +1042,7 @@ Stroke applyFilterRGB(unsigned char *img_data_rgb, int img_width, int img_height
 	}
 
 	const int rr = 2, gg = 1, bb = 0;
-	double r = 0, g = 0, b = 0;
+	long double r = 0, g = 0, b = 0;
 	for (int i = -filterSizeY / 2; i < filterSizeY - filterSizeY / 2; i++)
 	{
 		for (int j = -filterSizeX / 2; j < filterSizeX - filterSizeX / 2; j++)
@@ -1054,10 +1054,10 @@ Stroke applyFilterRGB(unsigned char *img_data_rgb, int img_width, int img_height
 			}
 			else
 			{
-				r += (double)img_data_rgb[rgb_offset + rr] * (double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
-				g += (double)img_data_rgb[rgb_offset + gg] * (double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
-				b += (double)img_data_rgb[rgb_offset + bb] * (double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
-			}
+				r += (long double)img_data_rgb[rgb_offset + rr] * (long double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				g += (long double)img_data_rgb[rgb_offset + gg] * (long double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
+				b += (long double)img_data_rgb[rgb_offset + bb] * (long double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
+			} 
 		}
 	}
 	assert(255.f >= r / sum);
@@ -1450,6 +1450,12 @@ void Application::Comp_Xor()
 // input rgb data; output rgb guassian data;
 unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB,int n)
 {
+	// testing for Error
+	unsigned char * currentRGB = this->To_RGB();
+	ofstream out;
+	out.open("getGaussianImgData.csv");
+
+
 	// create Gaussian filter
 	unsigned char *rgb = new unsigned char[img_width * img_height * 3];
 	for (int i = 0; i < img_width * img_height * 3; i++)
@@ -1457,9 +1463,10 @@ unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB,in
 		rgb[i] = sourceRGB[i];
 	}
 	vector<vector<double>> filter(n, vector<double>(n, 0));
+	//計算巴斯卡三角形的結果放入矩陣的第0行與第0列中
 	for (int i = 0; i < n; i++) {
 
-		double tmpS = 1, tmpE = 1;
+		unsigned long long tmpS = 1, tmpE = 1;
 		for (int j = 0; j < i; j++)
 			tmpS *= (n - 1 - j);
 		for (int j = 1; j <= i; j++)
@@ -1468,6 +1475,8 @@ unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB,in
 		filter[0][i] = tmpS / tmpE;
 		filter[i][0] = tmpS / tmpE;
 	}
+
+	//利用第0行與第0列形成矩陣
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < n; j++) {
 			if (j != 0 && i != 0)
@@ -1487,19 +1496,46 @@ unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB,in
 			rgb[offset_rgb + bb] = tmp.b;
 		}
 	}
+
+	// testing for Error
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
+
+			float error = sqrt(
+				pow(rgb[offset_rgb + rr] - currentRGB[offset_rgb + rr], 2.f) +
+				pow(rgb[offset_rgb + gg] - currentRGB[offset_rgb + gg], 2.f) +
+				pow(rgb[offset_rgb + bb] - currentRGB[offset_rgb + bb], 2.f)
+			);
+			out << error << ',';
+		}
+		out << endl;
+	}
+	out.close();
+
 	return rgb;
 }
 
+// input rgb data; output rgb guassian data;
 unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, int n)
 {
+	// testing for Error
+	unsigned char * currentRGB = this->To_RGB();
+	ofstream out;
+	out.open("getGaussianImgData2.csv");
+
 	double ** filter;
 	filter = (double **)malloc(n * sizeof(double *));
 	for (int i = 0; i < n; i++)
 		filter[i] = (double *)malloc(n * sizeof(double));
 
+	//計算巴斯卡三角形的結果放入矩陣的第0行與第0列中
 	for (int i = 0; i < n; i++) {
 
-		int tmpS = 1, tmpE = 1;
+		unsigned long long tmpS = 1, tmpE = 1;
 		for (int j = 0; j < i; j++)
 			tmpS *= (n - 1 - j);
 		for (int j = 1; j <= i; j++)
@@ -1509,6 +1545,7 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 		filter[i][0] = tmpS / tmpE;
 	}
 
+	//利用第0行與第0列形成矩陣
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < n; j++) {
 			if (j != 0 && i != 0)
@@ -1516,15 +1553,16 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 		}
 	}
 
+
 	bool edgeFlag = false;
 	if (n == -5)
 	{
 		edgeFlag = true;
 		n = 5;
 	}
-	unsigned char *rgb = this->To_RGB();
-	unsigned char *outputData = this->To_RGB();
 
+	unsigned char *rgb = this->To_RGB();
+	unsigned char *outputData = new unsigned char[img_width * img_height * 3];
 	for (int i = 0; i < img_height; i++)
 	{
 		for (int j = 0; j < img_width; j++)
@@ -1534,16 +1572,29 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 
 			int startPixel = offset_rgb - 2 * img_width * 3 - 2 * 3;
 
-			int sum = 0;
+			double sum = 0;
+			unsigned long long max = 0;
 
 			if (!edgeFlag)
+			{
 				for (int x = 0; x < n; x++)
 				{
 					for (int y = 0; y < n; y++)
 					{
-						sum += filter[x][y];
+						if (max < filter[x][y])
+							max = filter[x][y];
 					}
 				}
+
+				for (int x = 0; x < n; x++)
+				{
+					for (int y = 0; y < n; y++)
+					{
+						sum += (filter[x][y] / max);
+					}
+				}
+			}
+
 			else
 				sum = 256;
 
@@ -1566,12 +1617,38 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 				if (colorSum < 0) {
 					colorSum = 0;
 				}
+				if (!edgeFlag)
+					colorSum /= max;
 				outputData[offset_rgb + k] = colorSum / sum;
 			}
+
+			// img_data[offset_rgba + aa] = WHITE;
 		}
 	}
-
 	delete rgb;
+	for (int i = 0; i < n; i++)
+		free(filter[i]);
+	free(filter);
+
+	// testing for Error
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
+
+			float error = sqrt(
+				pow(outputData[offset_rgb + rr] - currentRGB[offset_rgb + rr], 2.f) +
+				pow(outputData[offset_rgb + gg] - currentRGB[offset_rgb + gg], 2.f) +
+				pow(outputData[offset_rgb + bb] - currentRGB[offset_rgb + bb], 2.f)
+			);
+			out << error << ',';
+		}
+		out << endl;
+	}
+	out.close();
+
 	return outputData;
 }
 
@@ -1591,7 +1668,7 @@ void Application::NPR_Paint()
 	vector<int> radii = { 7, 3, 1 };  // 7 3 1
 	for (int radius: radii)
 	{
-		unsigned char * reference__img = this->getGaussianImgData(sourceRGB, 2 * radius + 1);
+		unsigned char * reference__img = this->getGaussianImgData2(sourceRGB, 2 * radius + 1);
 
 		this->NPR_Paint_Layer(img_data, reference__img, radius);
 
@@ -1599,6 +1676,7 @@ void Application::NPR_Paint()
 	}
 
 	/*unsigned char * reference__img = this->getGaussianImgData(sourceRGB, 7 * 2 + 1);
+	unsigned char * reference__img2 = this->getGaussianImgData2(sourceRGB, 7 * 2 + 1);
 	for (int i = 0; i < img_height; i++)
 	{
 		for (int j = 0; j < img_width; j++)
@@ -1624,11 +1702,9 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 	float *distance = new float[img_width * img_height];
 
 	// 參數
-	float grid_2 = pow(tBrushSize * 2 + 1, 2.f);
-	float threshold = 25.0f;
-
-	int xStepSize = tBrushSize;
-	int yStepSize = tBrushSize;
+	float grid = tBrushSize;
+	float grid_2 = pow(grid, 2.f);
+	float threshold = 24.99f;
 
 	// 計算與tCanvas 跟 tReferenceImage 的rgb距離
 	ofstream ofs1, ofs2;
@@ -1656,11 +1732,12 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 
 
 	ofs2.open(string("avgError") + to_string(tBrushSize) + ".csv");
-	for (int i = tBrushSize; i < img_height; i += yStepSize)
+	for (int i = grid / 2; i < img_height; i += grid)
 	{
-		for (int j = tBrushSize; j < img_width; j += xStepSize)
+		for (int j = grid / 2; j < img_width; j += grid)
 		{
-			if (j + tBrushSize >= img_width || i + tBrushSize >= img_height)
+			// 防呆，避免i,j超過邊界
+			if (j + grid / 2 >= img_width || i + grid / 2 >= img_height)
 			{
 				ofs2 << 0.f << ',';
 				continue;
@@ -1672,9 +1749,9 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 				int x, y;
 				float count = 0;
 				// 取得在這個tBushSize的範圍內平均錯誤距離
-				for (int new_i = i - tBrushSize; new_i <= i + tBrushSize; new_i++)
+				for (int new_i = i - int(grid / 2); new_i <= i + int(grid / 2); new_i++)
 				{
-					for (int new_j = j - tBrushSize; new_j <= j + tBrushSize; new_j++)
+					for (int new_j = j - int(grid / 2); new_j <= j + int(grid / 2); new_j++)
 					{
 						int new_offset = new_i * img_width + new_j;
 						avg_error += distance[new_offset];
