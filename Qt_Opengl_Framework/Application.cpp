@@ -1574,7 +1574,7 @@ void Application::NPR_Paint()
 	vector<int> radii = { 7, 3, 1 };  // 7 3 1
 	for (int radius: radii)
 	{
-		unsigned char * reference__img = this->getGaussianImgData2(sourceRGB, 2 * radius + 1);
+		unsigned char * reference__img = this->getGaussianImgData(sourceRGB, 2 * radius + 1);
 
 		this->NPR_Paint_Layer(img_data, reference__img, radius);
 
@@ -1608,8 +1608,8 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 
 	// 參數
 	float grid_2 = pow(tBrushSize * 2 + 1, 2.f);
-	float threshold = tBrushSize * 3;
-	threshold = max(5.f, threshold);
+	float threshold = 25.0f;
+
 	int xStepSize = tBrushSize;
 	int yStepSize = tBrushSize;
 
@@ -1630,7 +1630,6 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 			);
 
 			// debug
-			assert(dist >= 0.f);
 			distance[offset] = dist;
 			ofs1 << dist << ',';
 		}
@@ -1640,12 +1639,13 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 
 
 	ofs2.open(string("avgError") + to_string(tBrushSize) + ".csv");
-	for (int i = tBrushSize; i < img_height; i+= yStepSize)
+	for (int i = tBrushSize; i < img_height; i += yStepSize)
 	{
-		for (int j = tBrushSize; j < img_width; j+= xStepSize)
+		for (int j = tBrushSize; j < img_width; j += xStepSize)
 		{
 			if (j + tBrushSize >= img_width || i + tBrushSize >= img_height)
 			{
+				ofs2 << 0.f << ',';
 				continue;
 			}
 			else
@@ -1653,6 +1653,7 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 				float avg_error = 0.f;
 				float max_error = 0.f;
 				int x, y;
+				float count = 0;
 				// 取得在這個tBushSize的範圍內平均錯誤距離
 				for (int new_i = i - tBrushSize; new_i <= i + tBrushSize; new_i++)
 				{
@@ -1660,19 +1661,21 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 					{
 						int new_offset = new_i * img_width + new_j;
 						avg_error += distance[new_offset];
-						if (distance[new_offset] > max_error)
+						if (distance[new_offset] >= max_error)
 						{
 							max_error = distance[new_offset];
 							x = new_j; 
 							y = new_i;
 						}
+						count++;
 					}
 				}
+				assert(count == grid_2);
 				avg_error =  avg_error / grid_2;
 
 				ofs2 << avg_error << ',';
 				// 如果平均錯誤距離高於門檻，就將當前範圍內error最大的座標當作stroke中心
-				if (avg_error >= threshold)
+				if (avg_error > threshold)
 				{
 					int offset_rgb = y * img_width * 3 + x * 3;
 					strokeList.push_back(Stroke(tBrushSize, x, y, 
@@ -1686,6 +1689,8 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 		ofs2 << endl;
 	}
 	ofs2.close();
+
+	// 打散畫筆順序
 	random_shuffle(strokeList.begin(), strokeList.end());
 	for (Stroke & stroke : strokeList)
 	{
