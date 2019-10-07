@@ -259,7 +259,7 @@ void Application::Quant_Populosity()
 			int offset_rgba = i * img_width * 4 + j * 4;
 
 			int MAX_DISTANCE = INT_MAX, index = -1;
-			for (unsigned int k = 0; k < allColor.size(); ++k )
+			for (unsigned int k = 0; k < allColor.size(); ++k)
 			{
 				auto & color = allColor[k];
 				int distance = int(pow(color[rr] - img_data[offset_rgba + rr], 2.f) + pow(color[gg] - img_data[offset_rgba + gg], 2.f) + pow(color[bb] - img_data[offset_rgba + bb], 2.f));
@@ -268,7 +268,7 @@ void Application::Quant_Populosity()
 					index = k;
 				}
 			}
-			
+
 			img_data[offset_rgba + rr] = allColor[index][rr];
 			img_data[offset_rgba + gg] = allColor[index][gg];
 			img_data[offset_rgba + bb] = allColor[index][bb];
@@ -616,10 +616,10 @@ void Application::filtering(double **filter, int n)
 			int offset_rgb = i * img_width * 3 + j * 3;
 			int offset_rgba = i * img_width * 4 + j * 4;
 
-			int startPixel = offset_rgb - 2 * img_width * 3 - 2 * 3;
+			int startPixel = offset_rgb - ((int)(n / 2)) * img_width * 3 - ((int)(n / 2)) * 3;
 
 			double sum = 0;
-			unsigned long long max=0;
+			unsigned long long max = 0;
 
 			if (!edgeFlag)
 			{
@@ -636,11 +636,11 @@ void Application::filtering(double **filter, int n)
 				{
 					for (int y = 0; y < n; y++)
 					{
-						sum += (filter[x][y]/max);
+						sum += (filter[x][y] / max);
 					}
 				}
 			}
-				
+
 			else
 				sum = 256;
 
@@ -665,6 +665,7 @@ void Application::filtering(double **filter, int n)
 				}
 				if (!edgeFlag)
 					colorSum /= max;
+
 				img_data[offset_rgba + k] = colorSum / sum;
 			}
 
@@ -789,7 +790,7 @@ void Application::Filter_Gaussian_N(unsigned int N)
 	//計算巴斯卡三角形的結果放入矩陣的第0行與第0列中
 	for (int i = 0; i < N; i++) {
 
-		unsigned long long tmpS = 1, tmpE = 1;
+		double tmpS = 1, tmpE = 1;
 		for (int j = 0; j < i; j++)
 			tmpS *= (N - 1 - j);
 		for (int j = 1; j <= i; j++)
@@ -948,7 +949,7 @@ Stroke applyFilter(unsigned char *img_data_rgba, int img_width, int img_height, 
 {
 	int filterSizeY = (int)filter.size();
 	int filterSizeX = (int)filter.front().size();
-	Stroke result(0,0,0,0,0,0,0);
+	Stroke result(0, 0, 0, 0, 0, 0, 0);
 	int sum = 0;
 	for (std::vector<double> &a : filter)
 	{
@@ -971,7 +972,7 @@ Stroke applyFilter(unsigned char *img_data_rgba, int img_width, int img_height, 
 			if (i + y >= img_height || i + y < 0 || j + x >= img_width || j + x < 0)
 			{
 				continue;
-			} 
+			}
 			else
 			{
 				r += img_data_rgba[rgb_offset + rr] * filter[i + filterSizeY / 2][j + filterSizeX / 2];
@@ -982,10 +983,10 @@ Stroke applyFilter(unsigned char *img_data_rgba, int img_width, int img_height, 
 		}
 	}
 
-	result.r = r/sum;
-	result.g = g/sum;
-	result.b = b/sum;
-	result.a = a/sum;
+	result.r = r / sum;
+	result.g = g / sum;
+	result.b = b / sum;
+	result.a = a / sum;
 	return result;
 }
 Stroke applyFilterRGB(unsigned char *img_data_rgb, int img_width, int img_height, int x, int y, std::vector<std::vector<int>> &filter)
@@ -1063,9 +1064,9 @@ Stroke applyFilterRGB(unsigned char *img_data_rgb, int img_width, int img_height
 	assert(255.f >= r / sum);
 	assert(255.f >= g / sum);
 	assert(255.f >= b / sum);
-	result.r = unsigned char (r / sum);
-	result.g = unsigned char (g / sum);
-	result.b = unsigned char (b / sum);
+	result.r = unsigned char(r / sum);
+	result.g = unsigned char(g / sum);
+	result.b = unsigned char(b / sum);
 	return result;
 }
 
@@ -1073,7 +1074,7 @@ void Application::Half_Size()
 {
 	unsigned char *rgb = this->To_RGB();
 
-	int new_img_width = img_width  / 2;
+	int new_img_width = img_width / 2;
 	int new_img_height = img_height / 2;
 	unsigned char *new_img_data = new unsigned char[new_img_width * new_img_height * 4];
 
@@ -1083,7 +1084,7 @@ void Application::Half_Size()
 		for (int j = 0; j < new_img_width; j++)
 		{
 			int new_offset_rgba = i * new_img_width * 4 + j * 4;
-			Stroke myStroke = applyFilter(img_data,img_width,img_height, 2 *j, 2 * i, filter);
+			Stroke myStroke = applyFilter(img_data, img_width, img_height, 2 * j, 2 * i, filter);
 			new_img_data[new_offset_rgba + rr] = myStroke.r;
 			new_img_data[new_offset_rgba + gg] = myStroke.g;
 			new_img_data[new_offset_rgba + bb] = myStroke.b;
@@ -1199,7 +1200,7 @@ void Application::Resize(float scale)
 			int src_j = img_width * j / new_img_width;
 			int src_i = img_height * i / new_img_height;
 
-			Stroke mystroke = applyFilter(img_data,img_width,img_height,src_j,src_i,filter);
+			Stroke mystroke = applyFilter(img_data, img_width, img_height, src_j, src_i, filter);
 			new_img_data[new_offset_rgba + rr] = mystroke.r;
 			new_img_data[new_offset_rgba + gg] = mystroke.g;
 			new_img_data[new_offset_rgba + bb] = mystroke.b;
@@ -1253,7 +1254,7 @@ void Application::Rotate(float angleDegrees)
 				img_data[dst_offset_rgba + bb] = 0;
 				img_data[dst_offset_rgba + aa] = WHITE;
 			}
-			else 
+			else
 			{
 				img_data[dst_offset_rgba + rr] = rgb[src_offset_rgb + rr];
 				img_data[dst_offset_rgba + gg] = rgb[src_offset_rgb + gg];
@@ -1448,7 +1449,7 @@ void Application::Comp_Xor()
 //------------------------NPR------------------------
 
 // input rgb data; output rgb guassian data;
-unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB,int n)
+unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB, int n)
 {
 	// create Gaussian filter
 	unsigned char *rgb = new unsigned char[img_width * img_height * 3];
@@ -1589,7 +1590,7 @@ void Application::NPR_Paint()
 	const unsigned char * sourceRGB = this->To_RGB();
 
 	vector<int> radii = { 7, 3, 1 };  // 7 3 1
-	for (int radius: radii)
+	for (int radius : radii)
 	{
 		unsigned char * reference__img = this->getGaussianImgData(sourceRGB, 2 * radius + 1);
 
@@ -1632,7 +1633,7 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 
 	// 計算與tCanvas 跟 tReferenceImage 的rgb距離
 	ofstream ofs1, ofs2;
-	ofs1.open(string("error") + to_string(tBrushSize) + ".csv") ;
+	ofs1.open(string("error") + to_string(tBrushSize) + ".csv");
 	for (int i = 0; i < img_height; i++)
 	{
 		for (int j = 0; j < img_width; j++)
@@ -1681,24 +1682,24 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 						if (distance[new_offset] >= max_error)
 						{
 							max_error = distance[new_offset];
-							x = new_j; 
+							x = new_j;
 							y = new_i;
 						}
 						count++;
 					}
 				}
 				assert(count == grid_2);
-				avg_error =  avg_error / grid_2;
+				avg_error = avg_error / grid_2;
 
 				ofs2 << avg_error << ',';
 				// 如果平均錯誤距離高於門檻，就將當前範圍內error最大的座標當作stroke中心
 				if (avg_error > threshold)
 				{
 					int offset_rgb = y * img_width * 3 + x * 3;
-					strokeList.push_back(Stroke(tBrushSize, x, y, 
-						tReferenceImage[offset_rgb + rr], 
-						tReferenceImage[offset_rgb + gg], 
-						tReferenceImage[offset_rgb + bb], 
+					strokeList.push_back(Stroke(tBrushSize, x, y,
+						tReferenceImage[offset_rgb + rr],
+						tReferenceImage[offset_rgb + gg],
+						tReferenceImage[offset_rgb + bb],
 						WHITE));
 				}
 			}
