@@ -1664,16 +1664,62 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 void Application::NPR_Paint()
 {
 	const unsigned char * sourceRGB = this->To_RGB();
-
 	vector<int> radii = { 7, 3, 1 };  // 7 3 1
 	for (int radius: radii)
 	{
-		unsigned char * reference__img = this->getGaussianImgData2(sourceRGB, 2 * radius + 1);
+		unsigned char * reference__img = this->getGaussianImgData(sourceRGB, 2 * radius + 1);
+		
 
 		this->NPR_Paint_Layer(img_data, reference__img, radius);
 
 		delete reference__img;
 	}
+	/*unsigned char * guassian = new unsigned char[img_width * img_height * 3];
+
+	Qt_Opengl_Framework::getInstance()->loadSecondFile(QString("D:\\GitHub\\computer-graphic-project1\\x64\\Debug\\G15.png"));
+	for (int i = 0; i <  img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = img_width * i * 3 + j * 3;
+			int offset_rgba = img_width * i * 4+ j * 4;
+			guassian[offset_rgb + rr] = img_data2[offset_rgba + rr];
+			guassian[offset_rgb + gg] = img_data2[offset_rgba + gg];
+			guassian[offset_rgb + bb] = img_data2[offset_rgba + bb];
+		}
+	}
+	this->NPR_Paint_Layer(img_data, guassian, 7);
+
+	Qt_Opengl_Framework::getInstance()->loadSecondFile(QString("D:\\GitHub\\computer-graphic-project1\\x64\\Debug\\G7.png"));
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = img_width * i * 3 + j * 3;
+			int offset_rgba = img_width * i * 4 + j * 4;
+			guassian[offset_rgb + rr] = img_data2[offset_rgba + rr];
+			guassian[offset_rgb + gg] = img_data2[offset_rgba + gg];
+			guassian[offset_rgb + bb] = img_data2[offset_rgba + bb];
+		}
+	}
+	this->NPR_Paint_Layer(img_data, guassian, 3);
+
+	Qt_Opengl_Framework::getInstance()->loadSecondFile(QString("D:\\GitHub\\computer-graphic-project1\\x64\\Debug\\G3.png"));
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = img_width * i * 3 + j * 3;
+			int offset_rgba = img_width * i * 4 + j * 4;
+			guassian[offset_rgb + rr] = img_data2[offset_rgba + rr];
+			guassian[offset_rgb + gg] = img_data2[offset_rgba + gg];
+			guassian[offset_rgb + bb] = img_data2[offset_rgba + bb];
+		}
+	}
+	this->NPR_Paint_Layer(img_data, guassian, 1);*/
+
+
+	
 
 	/*unsigned char * reference__img = this->getGaussianImgData(sourceRGB, 7 * 2 + 1);
 	unsigned char * reference__img2 = this->getGaussianImgData2(sourceRGB, 7 * 2 + 1);
@@ -1772,7 +1818,7 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 				if (avg_error > threshold)
 				{
 					int offset_rgb = y * img_width * 3 + x * 3;
-					strokeList.push_back(Stroke(tBrushSize, x, y, 
+					strokeList.push_back(Stroke(tBrushSize * 2, x, y, 
 						tReferenceImage[offset_rgb + rr], 
 						tReferenceImage[offset_rgb + gg], 
 						tReferenceImage[offset_rgb + bb], 
