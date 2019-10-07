@@ -60,6 +60,9 @@ void Application::renew()
 	ui_instance->ui.label->clear();
 	ui_instance->ui.label->setPixmap(QPixmap::fromImage(mImageDst));
 
+	ui_instance->ui.label->setFixedHeight(img_height);
+	ui_instance->ui.label->setFixedWidth(img_width);
+
 	std::cout << "Renew" << std::endl;
 }
 
@@ -1452,17 +1455,15 @@ void Application::Comp_Xor()
 unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB, int n)
 {
 	// testing for Error
-	unsigned char * currentRGB = this->To_RGB();
 	ofstream out;
 	out.open("getGaussianImgData.csv");
 
 
+
+	unsigned char * outputRGB = new unsigned char[img_width * img_height * 3];
+
+
 	// create Gaussian filter
-	unsigned char *rgb = new unsigned char[img_width * img_height * 3];
-	for (int i = 0; i < img_width * img_height * 3; i++)
-	{
-		rgb[i] = sourceRGB[i];
-	}
 	vector<vector<double>> filter(n, vector<double>(n, 0));
 	//計算巴斯卡三角形的結果放入矩陣的第0行與第0列中
 	for (int i = 0; i < n; i++) {
@@ -1491,10 +1492,10 @@ unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB, i
 		for (int j = 0; j < img_width; j++)
 		{
 			int offset_rgb = i * img_width * 3 + j * 3;
-			Stroke tmp = applyFilterRGB(rgb, img_width, img_height, j, i, filter);
-			rgb[offset_rgb + rr] = tmp.r;
-			rgb[offset_rgb + gg] = tmp.g;
-			rgb[offset_rgb + bb] = tmp.b;
+			Stroke tmp = applyFilterRGB((unsigned char *)sourceRGB, img_width, img_height, j, i, filter);
+			outputRGB[offset_rgb + rr] = tmp.r;
+			outputRGB[offset_rgb + gg] = tmp.g;
+			outputRGB[offset_rgb + bb] = tmp.b;
 		}
 	}
 
@@ -1507,9 +1508,9 @@ unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB, i
 			int offset_rgba = i * img_width * 4 + j * 4;
 
 			float error = sqrt(
-				pow(rgb[offset_rgb + rr] - currentRGB[offset_rgb + rr], 2.f) +
-				pow(rgb[offset_rgb + gg] - currentRGB[offset_rgb + gg], 2.f) +
-				pow(rgb[offset_rgb + bb] - currentRGB[offset_rgb + bb], 2.f)
+				pow(outputRGB[offset_rgb + rr] - sourceRGB[offset_rgb + rr], 2.f) +
+				pow(outputRGB[offset_rgb + gg] - sourceRGB[offset_rgb + gg], 2.f) +
+				pow(outputRGB[offset_rgb + bb] - sourceRGB[offset_rgb + bb], 2.f)
 			);
 			out << error << ',';
 		}
@@ -1517,14 +1518,13 @@ unsigned char *Application::getGaussianImgData(const unsigned char *sourceRGB, i
 	}
 	out.close();
 
-	return rgb;
+	return outputRGB;
 }
 
 // input rgb data; output rgb guassian data;
 unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, int n)
 {
 	// testing for Error
-	unsigned char * currentRGB = this->To_RGB();
 	ofstream out;
 	out.open("getGaussianImgData2.csv");
 
@@ -1536,7 +1536,7 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 	//計算巴斯卡三角形的結果放入矩陣的第0行與第0列中
 	for (int i = 0; i < n; i++) {
 
-		unsigned long long tmpS = 1, tmpE = 1;
+		double tmpS = 1, tmpE = 1;
 		for (int j = 0; j < i; j++)
 			tmpS *= (n - 1 - j);
 		for (int j = 1; j <= i; j++)
@@ -1555,15 +1555,16 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 	}
 
 
+
+	unsigned char *outputData = new unsigned char[img_width * img_height * 3];
 	bool edgeFlag = false;
 	if (n == -5)
 	{
 		edgeFlag = true;
 		n = 5;
 	}
-
 	unsigned char *rgb = this->To_RGB();
-	unsigned char *outputData = new unsigned char[img_width * img_height * 3];
+
 	for (int i = 0; i < img_height; i++)
 	{
 		for (int j = 0; j < img_width; j++)
@@ -1571,7 +1572,7 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 			int offset_rgb = i * img_width * 3 + j * 3;
 			int offset_rgba = i * img_width * 4 + j * 4;
 
-			int startPixel = offset_rgb - 2 * img_width * 3 - 2 * 3;
+			int startPixel = offset_rgb - ((int)(n / 2)) * img_width * 3 - ((int)(n / 2)) * 3;
 
 			double sum = 0;
 			unsigned long long max = 0;
@@ -1612,7 +1613,7 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 						if (pixelAt < 0 || pixelAt>img_height*img_width * 3)
 							colorSum += 0;
 						else
-							colorSum += rgb[pixelAt] * filter[x][y];
+							colorSum += sourceRGB[pixelAt] * filter[x][y];
 					}
 				}
 				if (colorSum < 0) {
@@ -1620,13 +1621,12 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 				}
 				if (!edgeFlag)
 					colorSum /= max;
+
 				outputData[offset_rgb + k] = colorSum / sum;
 			}
-
-			// img_data[offset_rgba + aa] = WHITE;
 		}
 	}
-	delete rgb;
+
 	for (int i = 0; i < n; i++)
 		free(filter[i]);
 	free(filter);
@@ -1640,9 +1640,9 @@ unsigned char *Application::getGaussianImgData2(const unsigned char *sourceRGB, 
 			int offset_rgba = i * img_width * 4 + j * 4;
 
 			float error = sqrt(
-				pow(outputData[offset_rgb + rr] - currentRGB[offset_rgb + rr], 2.f) +
-				pow(outputData[offset_rgb + gg] - currentRGB[offset_rgb + gg], 2.f) +
-				pow(outputData[offset_rgb + bb] - currentRGB[offset_rgb + bb], 2.f)
+				pow(outputData[offset_rgb + rr] - sourceRGB[offset_rgb + rr], 2.f) +
+				pow(outputData[offset_rgb + gg] - sourceRGB[offset_rgb + gg], 2.f) +
+				pow(outputData[offset_rgb + bb] - sourceRGB[offset_rgb + bb], 2.f)
 			);
 			out << error << ',';
 		}
@@ -1751,7 +1751,7 @@ void Application::NPR_Paint_Layer(unsigned char *tCanvas, unsigned char *tRefere
 	// 參數
 	float grid = tBrushSize;
 	float grid_2 = pow(grid, 2.f);
-	float threshold = 24.99f;
+	float threshold = 20.f;
 
 	// 計算與tCanvas 跟 tReferenceImage 的rgb距離
 	ofstream ofs1, ofs2;
