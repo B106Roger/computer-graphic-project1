@@ -372,7 +372,109 @@ void Application::Dither_Random()
 void Application::Dither_FS()
 {
 	Gray();
-	Dither_Color();
+	unsigned char *rgb = this->To_RGB();
+
+	for (int i = 0; i < img_height; i++)
+	{
+		for (int j = 0; j < img_width; j++)
+		{
+			int offset_rgb = i * img_width * 3 + j * 3;
+			int offset_rgba = i * img_width * 4 + j * 4;
+
+			int offset;
+			float val;
+			float r, g, b;
+
+			float oldR = img_data[offset_rgba + rr];
+			float oldG = img_data[offset_rgba + gg];
+			float oldB = img_data[offset_rgba + bb];
+
+			// float Rdiscrete = 255.0 / 2;
+			// float Gdiscrete = 255.0 / 2;
+			// float Bdiscrete = 255.0 / 2;
+			// 
+			// float newR = round(oldR / Rdiscrete) * Rdiscrete;
+			// float newG = round(oldG / Gdiscrete) * Gdiscrete;
+			// float newB = round(oldB / Bdiscrete) * Bdiscrete;
+
+			float neWColor = oldR > 127 ? WHITE : BLACK;
+
+			img_data[offset_rgba + rr] = neWColor;
+			img_data[offset_rgba + gg] = neWColor;
+			img_data[offset_rgba + bb] = neWColor;
+
+			float qtErrR = oldR - neWColor;
+			float qtErrG = oldG - neWColor;
+			float qtErrB = oldB - neWColor;
+
+			if ((j + 1) < img_width)
+			{
+				offset = i * img_width * 4 + (j + 1) * 4;
+				val = 7.0 / 16.0;
+				r = img_data[offset + rr] + qtErrR * val;
+				g = img_data[offset + gg] + qtErrG * val;
+				b = img_data[offset + bb] + qtErrB * val;
+				if (r > 255)r = 255; if (r < 0)r = 0;
+				if (g > 255)g = 255; if (g < 0)g = 0;
+				if (b > 255)b = 255; if (b < 0)b = 0;
+				img_data[offset + rr] = r;
+				img_data[offset + gg] = g;
+				img_data[offset + bb] = b;
+			}
+
+			if ((i + 1) < img_height && (j - 1) >= 0)
+			{
+				offset = (i + 1) * img_width * 4 + (j - 1) * 4;
+				val = 3.0 / 16.0;
+				r = img_data[offset + rr] + qtErrR * val;
+				g = img_data[offset + gg] + qtErrG * val;
+				b = img_data[offset + bb] + qtErrB * val;
+				if (r > 255)r = 255; if (r < 0)r = 0;
+				if (g > 255)g = 255; if (g < 0)g = 0;
+				if (b > 255)b = 255; if (b < 0)b = 0;
+				img_data[offset + rr] = r;
+				img_data[offset + gg] = g;
+				img_data[offset + bb] = b;
+			}
+
+			if ((i + 1) < img_height)
+			{
+				offset = (i + 1) * img_width * 4 + j * 4;
+				val = 5.0 / 16.0;
+				r = img_data[offset + rr] + qtErrR * val;
+				g = img_data[offset + gg] + qtErrG * val;
+				b = img_data[offset + bb] + qtErrB * val;
+				if (r > 255)r = 255; if (r < 0)r = 0;
+				if (g > 255)g = 255; if (g < 0)g = 0;
+				if (b > 255)b = 255; if (b < 0)b = 0;
+				img_data[offset + rr] = r;
+				img_data[offset + gg] = g;
+				img_data[offset + bb] = b;
+			}
+
+			if ((i + 1) < img_height && (j + 1) < img_width)
+			{
+				offset = (i + 1) * img_width * 4 + (j + 1) * 4;
+				val = 1.0 / 16.0;
+				r = img_data[offset + rr] + qtErrR * val;
+				g = img_data[offset + gg] + qtErrG * val;
+				b = img_data[offset + bb] + qtErrB * val;
+				if (r > 255)r = 255; if (r < 0)r = 0;
+				if (g > 255)g = 255; if (g < 0)g = 0;
+				if (b > 255)b = 255; if (b < 0)b = 0;
+				img_data[offset + rr] = r;
+				img_data[offset + gg] = g;
+				img_data[offset + bb] = b;
+			}
+
+		}
+	}
+
+	delete[] rgb;
+	mImageDst = QImage(img_data, img_width, img_height, QImage::Format_ARGB32);
+	renew();
+
+
 }
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -382,13 +484,9 @@ void Application::Dither_FS()
 ///////////////////////////////////////////////////////////////////////////////
 void Application::Dither_Bright()
 {
-
-
 	unsigned char *rgb = this->To_RGB();
 
 	float sum = 0;
-	float ct = 0;
-
 	for (int i = 0; i < img_height; i++)
 	{
 		for (int j = 0; j < img_width; j++)
@@ -399,11 +497,38 @@ void Application::Dither_Bright()
 			float gray = 0.3 * rgb[offset_rgb + rr] + 0.59 * rgb[offset_rgb + gg] + 0.11 * rgb[offset_rgb + bb];
 
 			sum += gray / 256;
-			ct++;
 		}
 	}
 
-	float avg = sum / ct;
+	this->Gray();
+
+	double avg = sum / (img_height*img_width);
+
+	int whiteSpot = (img_height*img_width)*avg;
+
+	bool isEnd = true;
+
+	for (int x = 255; x >= 0 && isEnd; x--) {
+		for (int i = 0; i < img_height&&isEnd; i++)
+		{
+			for (int j = 0; j < img_width&&isEnd; j++)
+			{
+				int offset_rgb = i * img_width * 3 + j * 3;
+				int offset_rgba = i * img_width * 4 + j * 4;
+				if (img_data[offset_rgba] > x&&img_data[offset_rgba + aa] == WHITE) {
+					for (int k = 0; k < 3; k++)
+						img_data[offset_rgba + k] = 255;
+
+					img_data[offset_rgba + aa] = 1;
+					whiteSpot--;
+				}
+				if (whiteSpot == 0)
+					isEnd = false;
+			}
+		}
+
+	}
+
 
 	for (int i = 0; i < img_height; i++)
 	{
@@ -412,15 +537,7 @@ void Application::Dither_Bright()
 			int offset_rgb = i * img_width * 3 + j * 3;
 			int offset_rgba = i * img_width * 4 + j * 4;
 
-			float gray = 0.3 * rgb[offset_rgb + rr] + 0.59 * rgb[offset_rgb + gg] + 0.11 * rgb[offset_rgb + bb];
-
-			if ((gray / 256) > avg)
-			{
-				for (int k = 0; k < 3; k++)
-					img_data[offset_rgba + k] = 255;
-			}
-			else
-			{
+			if (img_data[offset_rgba] != 255) {
 				for (int k = 0; k < 3; k++)
 					img_data[offset_rgba + k] = 0;
 			}
@@ -1061,7 +1178,7 @@ Stroke applyFilterRGB(unsigned char *img_data_rgb, int img_width, int img_height
 				r += (long double)img_data_rgb[rgb_offset + rr] * (long double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
 				g += (long double)img_data_rgb[rgb_offset + gg] * (long double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
 				b += (long double)img_data_rgb[rgb_offset + bb] * (long double)filter[i + filterSizeY / 2][j + filterSizeX / 2];
-			} 
+			}
 		}
 	}
 	assert(255.f >= r / sum);
